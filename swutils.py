@@ -142,7 +142,7 @@ def run_or_schedule(job, schedule=False, exception_handler=None):
 
     Args:
         job (func): The func to run
-        schedule (bool): The func to run (default: False)
+        schedule (bool): Schedule `func` to run in the future (default: False)
         exception_handler (func): The exception handler to wrap the function in
             (default: None)
 
