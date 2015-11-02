@@ -12,19 +12,19 @@ from manager import Manager
 from subprocess import call
 
 manager = Manager()
-_basedir = p.dirname(__file__)
+BASEDIR = p.dirname(__file__)
 
 
 @manager.command
 def clean():
     """Remove Python file and build artifacts"""
-    call(p.join(_basedir, 'helpers', 'clean'), shell=True)
+    call(p.join(BASEDIR, 'helpers', 'clean'), shell=True)
 
 
 @manager.command
 def check():
     """Check staged changes for lint errors"""
-    call(p.join(_basedir, 'helpers', 'check-stage'), shell=True)
+    call(p.join(BASEDIR, 'helpers', 'check-stage'), shell=True)
 
 
 @manager.arg('where', 'w', help='Modules to check')
@@ -55,13 +55,13 @@ def test(where=None, stop=False):
     """Run nose and script tests"""
     opts = '-xv' if stop else '-v'
     opts += 'w %s' % where if where else ''
-    call([p.join(_basedir, 'helpers', 'test'), opts])
+    call([p.join(BASEDIR, 'helpers', 'test'), opts])
 
 
 @manager.command
 def register():
     """Register package with PyPI"""
-    call('python %s register' % p.join(_basedir, 'setup.py'), shell=True)
+    call('python %s register' % p.join(BASEDIR, 'setup.py'), shell=True)
 
 
 @manager.command
@@ -82,19 +82,19 @@ def build():
 @manager.command
 def upload():
     """Upload distribution files"""
-    call('twine upload %s' % p.join(_basedir, 'dist', '*'), shell=True)
+    call('twine upload %s' % p.join(BASEDIR, 'dist', '*'), shell=True)
 
 
 @manager.command
 def sdist():
     """Create a source distribution package"""
-    call(p.join(_basedir, 'helpers', 'srcdist'), shell=True)
+    call(p.join(BASEDIR, 'helpers', 'srcdist'), shell=True)
 
 
 @manager.command
 def wheel():
     """Create a wheel package"""
-    call(p.join(_basedir, 'helpers', 'wheel'), shell=True)
+    call(p.join(BASEDIR, 'helpers', 'wheel'), shell=True)
 
 
 if __name__ == '__main__':
