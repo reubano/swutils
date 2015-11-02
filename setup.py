@@ -10,9 +10,7 @@ try:
 except ImportError:
     from distutils.core import setup
 
-# Avoid byte-compiling the shipped template
 sys.dont_write_bytecode = True
-
 requirements = list(pkutils.parse_requirements('requirements.txt'))
 dev_requirements = list(pkutils.parse_requirements('dev-requirements.txt'))
 dependencies = list(pkutils.parse_requirements('requirements.txt', dep=True))
