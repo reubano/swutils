@@ -2,7 +2,7 @@
 
 ## Introduction
 
-swutils is a Python library for interacting with interacting with [ScraperWiki](https://scraperwiki.com/products/data-science-platform) boxes.
+swutils is a Python library for interacting with [ScraperWiki](https://scraperwiki.com/products/data-science-platform) boxes.
 
 With swutils, you can
 
