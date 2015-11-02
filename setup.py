@@ -20,12 +20,6 @@ readme = pkutils.read('README.md')
 changes = pkutils.read('CHANGES.rst').replace('.. :changelog:', '')
 license = swutils.__license__
 
-classifier = {
-    'GPL': 'GNU General Public License (GPL)',
-    'MIT': 'MIT License',
-    'BSD': 'BSD License'
-}
-
 setup(
     name=swutils.__title__,
     version=swutils.__version__,
@@ -43,7 +37,7 @@ setup(
     zip_safe=False,
     keywords=swutils.__title__,
     classifiers=[
-        classifier[license],
+        pkutils.LICENSES[license],
         'Development Status :: 4 - Beta',
         'Natural Language :: English',
         'Programming Language :: Python :: 2',
