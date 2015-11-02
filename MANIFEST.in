@@ -1,0 +1,6 @@
+recursive-include swutils/tests *
+include CHANGES.rst
+include CONTRIBUTING.rst
+include LICENSE
+include README.rst
+include requirements.txt
