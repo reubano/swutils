@@ -5,12 +5,14 @@
 swutils
 ~~~~~~~
 
-Provides methods for interacting with a CKAN instance
+Provides methods for interacting with ScraperWiki boxes
 
 Examples:
-    literal blocks::
+    Schedule a job::
 
-        python example_google.py
+        job = lambda x: 'hello %s' % x
+        exception_handler = ExceptionHandler('reubano@gmail.com').handler
+        run_or_schedule(job, True, exception_handler)
 
 Attributes:
     SCHEDULE_TIME (str): Time of the day to run the scheduled job.
@@ -34,7 +36,7 @@ __version__ = '0.5.0'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
-__description__ = 'Miscellaneous CKAN utility library'
+__description__ = 'ScraperWiki box utility library'
 __email__ = 'reubano@gmail.com'
 __license__ = 'MIT'
 __copyright__ = 'Copyright 2015 Reuben Cummings'
