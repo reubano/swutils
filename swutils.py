@@ -33,7 +33,7 @@ from os import environ
 from email.mime.text import MIMEText
 from testfixtures import LogCapture
 
-__version__ = '0.6.0'
+__version__ = '0.6.1'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
