@@ -54,7 +54,7 @@ class ExceptionHandler(object):
     def handler(self, func):
         def wrapper(*args, **kwargs):
             try:
-                func(*args, **kwargs)
+                res = func(*args, **kwargs)
             except Exception as e:
                 self.logger.exception(str(e))
                 scraperwiki.status('error', 'Error collecting data')
@@ -63,6 +63,7 @@ class ExceptionHandler(object):
                     send_email(self.recipient, text=f.read())
             else:
                 scraperwiki.status('ok')
+                return res
 
         return wrapper
 
