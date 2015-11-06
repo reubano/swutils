@@ -224,11 +224,7 @@ def get_dynamic_res(engine, get_table_name, t, **kwargs):
     name, data = t
     f = get_table_name or unicode.lower
     table_name = f(name)
-
-    try:
-        Base = engine.Model
-    except AttributeError:
-        Base = declarative_base()
+    Base = declarative_base()
 
     # dynamically create sqlalchemy table
     attrs = {'__tablename__': table_name}
