@@ -383,6 +383,8 @@ def populate(gen_data, engine, models=None, get_name=None, **kwargs):
     """
     log_level = logging.DEBUG if kwargs.get('DEBUG') else logging.INFO
     logger.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    logger.addHandler(console_handler)
     test = kwargs.get('TESTING')
     row_limit = kwargs.get('ROW_LIMIT')
     chunk_size = min(row_limit or 'inf', kwargs.get('CHUNK_SIZE', row_limit))
