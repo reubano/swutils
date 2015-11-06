@@ -67,6 +67,7 @@ class ExceptionHandler(object):
         self.to = to
         self.logfile = logfile
         self.logger = logging.getLogger(logname)
+        open(logfile, 'w').close() if not p.exists(logfile) else None
 
     def email(self, subject=None, text=None, host='localhost'):
         """ Sends the email notification
