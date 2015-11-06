@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.7.0'
+__version__ = '0.8.0'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -220,15 +220,11 @@ def execute(records, engine, table, rid=None):
     return del_count, in_count
 
 
-def get_dynamic_res(engine, get_table_name, t, **kwargs):
+def get_dynamic_res(engine, get_name, t, **kwargs):
     name, data = t
-    f = get_table_name or unicode.lower
+    f = get_name or unicode.lower
     table_name = f(name)
-
-    try:
-        Base = engine.Model
-    except AttributeError:
-        Base = declarative_base()
+    Base = declarative_base()
 
     # dynamically create sqlalchemy table
     attrs = {'__tablename__': table_name}
@@ -292,7 +288,7 @@ def get_tables(gen_data, **kwargs):
     return dynamic, tables
 
 
-def populate(gen_data, engine, models=None, get_table_name=None, **kwargs):
+def populate(gen_data, engine, models=None, get_name=None, **kwargs):
     """Populates a SQLAlchemy db with data. Supports both declarative
     SQLAlchemy and Flask-SQLAlchemy
 
@@ -306,7 +302,7 @@ def populate(gen_data, engine, models=None, get_table_name=None, **kwargs):
         engine (obj): A SQLAlchemy engine.
         models (module): A models module of SQLAlchemy table classes
             (default: None).
-        get_table_name (func): A function used to generate the table name if
+        get_name (func): A function used to generate the table name if
             `TABLES` is unset. It will receive the name of each
             each grouped obtained by grouping the data generated from
             `gen_data` (default: None).
@@ -398,7 +394,7 @@ def populate(gen_data, engine, models=None, get_table_name=None, **kwargs):
     dynamic, tables = get_tables(gen_data, **kwargs)
 
     if dynamic:
-        result_func = partial(get_dynamic_res, engine, get_table_name, **kwargs)
+        result_func = partial(get_dynamic_res, engine, get_name, **kwargs)
     elif models:
         result_func = partial(res_from_models, models, gen_data, **kwargs)
     else:
