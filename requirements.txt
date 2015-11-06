@@ -2,3 +2,5 @@ scraperwiki==0.4.1
 pkutils==0.6.1
 schedule==0.3.2
 testfixtures==4.4.0
+SQLAlchemy==1.0.6
+tabutils==0.18.1

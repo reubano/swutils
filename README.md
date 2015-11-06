@@ -25,7 +25,7 @@ swutils requires the following in order to run properly:
 
 (You are using a [virtualenv](http://www.virtualenv.org/en/latest/index.html), right?)
 
-    sudo pip install swutils
+    pip install swutils
 
 ## Usage
 
