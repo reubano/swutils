@@ -52,7 +52,7 @@ class ExceptionHandler(object):
     https://www.garron.me/en/mac/postfix-relay-gmail-mac-os-x-local-smtp.html
     """
     def __init__(self, to, logfile='log.txt', logname=''):
-        """ ExceptionHandler constructor
+        """ExceptionHandler constructor
 
         Args:
             to (str): The email recipient
@@ -70,7 +70,7 @@ class ExceptionHandler(object):
         open(logfile, 'w').close() if not p.exists(logfile) else None
 
     def email(self, subject=None, text=None, host='localhost'):
-        """ Sends the email notification
+        """Sends the email notification
 
         Args:
             subject (str): The email subject (default: localhost).
@@ -98,7 +98,7 @@ class ExceptionHandler(object):
         return s
 
     def handler(self, func):
-        """ Creates the exception handler
+        """Creates the exception handler
 
         Args:
             func (func): The func to catch exceptions from
@@ -139,7 +139,7 @@ class ExceptionHandler(object):
 
 
 def run_or_schedule(job, schedule=False, exception_handler=None):
-    """ Runs a job and optionally schedules it to run later
+    """Runs a job and optionally schedules it to run later
 
     Args:
         job (func): The func to run
