@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -383,6 +383,8 @@ def populate(gen_data, engine, models=None, get_name=None, **kwargs):
     """
     log_level = logging.DEBUG if kwargs.get('DEBUG') else logging.INFO
     logger.setLevel(log_level)
+    console_handler = logging.StreamHandler()
+    logger.addHandler(console_handler)
     test = kwargs.get('TESTING')
     row_limit = kwargs.get('ROW_LIMIT')
     chunk_size = min(row_limit or 'inf', kwargs.get('CHUNK_SIZE', row_limit))
