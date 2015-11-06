@@ -25,13 +25,24 @@ from __future__ import (
 import time
 import smtplib
 import logging
+import itertools as it
 
 import schedule as sch
 import scraperwiki
 
-from os import environ
+from os import environ, path as p
 from email.mime.text import MIMEText
+from pprint import pprint
+from operator import itemgetter
+from functools import partial
+
 from testfixtures import LogCapture
+from tabutils import process as pr, fntools as ft
+from sqlalchemy import Column, Integer
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.schema import MetaData
+from sqlalchemy.orm import sessionmaker
 
 __version__ = '0.6.2'
 
@@ -43,6 +54,8 @@ __license__ = 'MIT'
 __copyright__ = 'Copyright 2015 Reuben Cummings'
 
 SCHEDULE_TIME = '10:30'
+meta = MetaData()
+logger = logging.getLogger('populate')
 
 
 class ExceptionHandler(object):
@@ -94,7 +107,7 @@ class ExceptionHandler(object):
         # Send the message via our own SMTP server, but don't include the
         # envelope header.
         s = smtplib.SMTP(host)
-        s.sendmail(msg['From'], [msg['To']], msg.as_string())
+        # s.sendmail(msg['From'], [msg['To']], msg.as_string())
         s.quit()
         return s
 
@@ -149,8 +162,6 @@ def run_or_schedule(job, schedule=False, exception_handler=None):
             (default: None)
 
     Examples:
-        >>> from pprint import pprint
-        >>> from functools import partial
         >>> job = partial(pprint, 'hello world')
         >>> run_or_schedule(job)
         u'hello world'
@@ -169,3 +180,247 @@ def run_or_schedule(job, schedule=False, exception_handler=None):
         while True:
             sch.run_pending()
             time.sleep(1)
+
+
+def get_message(count, name, deleted=True):
+    """Generates a message on the number of records inserted or deleted
+
+    Args:
+        count (int): The number of records
+        name (str): The table name
+        deleted (bool): The exception handler to wrap the function in
+            (default: True)
+
+    Examples:
+        >>> print(get_message(5, 'table'))
+        Deleted 5 records from table `table`.
+        >>> print(get_message(5, 'table', False))
+        Inserted 5 records into table `table`.
+
+    Returns
+        str: The message
+    """
+    verb, prep = ('Deleted', 'from') if deleted else ('Inserted', 'into')
+    return '%s %s records %s table `%s`.' % (verb, count, prep, name)
+
+
+def execute(records, engine, table, rid=None):
+    in_count = len(records)
+
+    if rid:
+        # delete records if already in db
+        ids = map(itemgetter(rid), records)
+        q = table.query.filter(getattr(table, rid).in_(ids))
+        del_count = q.delete(synchronize_session=False)
+        engine.session.commit()
+    else:
+        del_count = 0
+
+    engine.execute(table.insert(), records)
+    return del_count, in_count
+
+
+def get_dynamic_res(engine, get_table_name, t, **kwargs):
+    name, data = t
+    f = get_table_name or unicode.lower
+    table_name = f(name)
+
+    try:
+        Base = engine.Model
+    except AttributeError:
+        Base = declarative_base()
+
+    # dynamically create sqlalchemy table
+    attrs = {'__tablename__': table_name}
+
+    result = {
+        'table': type(str(name), (Base, kwargs['mixin']), attrs).__table__,
+        'rid': None,
+        'data': data}
+
+    return result
+
+
+def res_from_models(models, gen_data, t, **kwargs):
+    result = {
+        'table': getattr(models, t.get('name').title()).__table__,
+        'rid': t.get('rid'),
+        'data': gen_data(**pr.merge([kwargs, t]))}
+
+    return result
+
+
+def res_from_meta(engine, gen_data, t, **kwargs):
+    meta.reflect(engine)
+    result = {
+        'table': meta.tables[t.get('name')],
+        'rid': t.get('rid'),
+        'data': gen_data(**pr.merge([kwargs, t]))}
+
+    return result
+
+
+def delete_records(table, rid, engine):
+    if not rid:
+        # delete all records since there is no way to identify them
+        table.query = engine.session.query(table)
+
+        try:
+            del_count = table.query.delete(synchronize_session=False)
+        except OperationalError:
+            table.create(engine)
+            del_count = 0
+        else:
+            engine.session.commit()
+    else:
+        del_count = 0
+
+    return del_count
+
+
+def get_tables(gen_data, **kwargs):
+    tables = kwargs.get('TABLES')
+
+    if tables:
+        dynamic = False
+    else:
+        dynamic = True
+        data = gen_data(**kwargs)
+        keyfunc = itemgetter(kwargs['KEY'])
+        tables = it.groupby(sorted(data, key=keyfunc), keyfunc)
+
+    return dynamic, tables
+
+
+def populate(gen_data, engine, models=None, get_table_name=None, **kwargs):
+    """Populates a SQLAlchemy db with data. Supports both declarative
+    SQLAlchemy and Flask-SQLAlchemy
+
+    Note: Either `TABLES` or `KEY` must be defined.
+
+    Args:
+        gen_data (func): A function used to generate the data to be inserted
+            into the db. It will receive keywords comprised of combining
+            `kwargs` with a table defined in `TABLES`.
+
+        engine (obj): A SQLAlchemy engine.
+        models (module): A models module of SQLAlchemy table classes
+            (default: None).
+        get_table_name (func): A function used to generate the table name if
+            `TABLES` is unset. It will receive the name of each
+            each grouped obtained by grouping the data generated from
+            `gen_data` (default: None).
+        kwargs (dict): Keyword arguments passed to `gen_data`.
+
+    Kwargs:
+        mixin (class): Base table that dynamically create tables inherit.
+            Required if `TABLES` is unset.
+        TABLES (list[dicts]): The table options. Required if `KEY` is unset.
+        KEY (str): The field used to group data generated from `gen_data`.
+            Required if `TABLES` is unset.
+        ROW_LIMIT (int): The max total number of rows to process
+        CHUNK_SIZE (int): The max number of rows to process at one time
+        DEBUG (bool): Run in debug mode
+        TESTING (bool): Run in test mode
+
+    Examples:
+        >>> # Test dynamic tables
+        >>> from sqlalchemy import create_engine
+        >>> class BaseMixin(object):
+        ...    id = Column(Integer, primary_key=True)
+        ...    value = Column(Integer)
+        ...
+        >>> meta = MetaData()
+        >>> kwargs = {'KEY': 'kind', 'ROW_LIMIT': 4, 'mixin': BaseMixin}
+        >>> f = lambda x: {'kind': 'odd' if x % 2 else 'even', 'value': x}
+        >>> gen_data = lambda **x: map(f, range(15))
+        >>> engine = create_engine('sqlite:///:memory:')
+        >>> populate(gen_data, engine, **kwargs)
+        >>> session = sessionmaker(engine)()
+        >>> meta.reflect(engine)
+        >>> tables = meta.sorted_tables
+        >>> dict(session.query(tables[0]).all()) == {1: 0, 2: 2, 3: 4, 4: 6}
+        True
+        >>> dict(session.query(tables[1]).all()) == {1: 1, 2: 3, 3: 5, 4: 7}
+        True
+        >>> meta.drop_all(engine)
+        >>>
+        >>> # Test tables without specifying the `rid`
+        >>> Base = declarative_base()
+        >>> class Single(Base):
+        ...     __tablename__ = 'single'
+        ...     id = Column(Integer, primary_key=True)
+        ...     rid = Column(Integer)
+        ...     value = Column(Integer)
+        ...
+        >>> class Triple(Base):
+        ...     __tablename__ = 'triple'
+        ...     id = Column(Integer, primary_key=True)
+        ...     rid = Column(Integer)
+        ...     value = Column(Integer)
+        ...
+        >>> options = [
+        ...     {'mul': 1, 'name': 'single'}, {'mul': 3, 'name': 'triple'}]
+        >>> kwargs = {'TABLES': options, 'ROW_LIMIT': 4}
+        >>> def gen_data(**x):
+        ...     return ({'value': n * x['mul'], 'rid': n} for n in it.count())
+        >>> Base.metadata.create_all(engine)
+        >>> populate(gen_data, engine, **kwargs)
+        >>> Base.metadata.reflect(engine)
+        >>> tables = Base.metadata.sorted_tables
+        >>> session.query(tables[0]).all()
+        [(1, 0, 0), (2, 1, 1), (3, 2, 2), (4, 3, 3)]
+        >>> session.query(tables[1]).all()
+        [(1, 0, 0), (2, 1, 3), (3, 2, 6), (4, 3, 9)]
+        >>>
+        >>> # Test tables with a specified `rid`
+        >>> populate(gen_data, engine, rid='rid', **kwargs)
+        >>> Base.metadata.reflect(engine)
+        >>> tables = Base.metadata.sorted_tables
+        >>> session.query(tables[0]).all()
+        [(1, 0, 0), (2, 1, 1), (3, 2, 2), (4, 3, 3)]
+        >>> session.query(tables[1]).all()
+        [(1, 0, 0), (2, 1, 3), (3, 2, 6), (4, 3, 9)]
+
+    Returns
+        str: The message
+    """
+    log_level = logging.DEBUG if kwargs.get('DEBUG') else logging.INFO
+    logger.setLevel(log_level)
+    test = kwargs.get('TESTING')
+    row_limit = kwargs.get('ROW_LIMIT')
+    chunk_size = min(row_limit or 'inf', kwargs.get('CHUNK_SIZE', row_limit))
+    engine.session = sessionmaker(engine)()
+
+    if test:
+        meta.create_all(engine)
+
+    dynamic, tables = get_tables(gen_data, **kwargs)
+
+    if dynamic:
+        result_func = partial(get_dynamic_res, engine, get_table_name, **kwargs)
+    elif models:
+        result_func = partial(res_from_models, models, gen_data, **kwargs)
+    else:
+        result_func = partial(res_from_meta, engine, gen_data, **kwargs)
+
+    for t in tables:
+        count = 0
+        result = result_func(t)
+        table, rid, data = result['table'], result['rid'], result['data']
+        del_count = delete_records(table, rid, engine)
+        logger.debug(get_message(del_count, table.name))
+
+        for records in ft.chunk(data, chunk_size):
+            del_count, in_count = execute(records, engine, table, rid)
+            count += in_count
+            logger.debug(get_message(del_count, table.name))
+            logger.debug(get_message(in_count, table.name, False))
+
+            if test:
+                pprint(records)
+
+            if row_limit and count >= row_limit:
+                break
+
+        logger.debug('Success! %s' % get_message(count, table.name, False))
