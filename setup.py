@@ -33,7 +33,7 @@ setup(
     tests_require=dev_requirements,
     license=license,
     zip_safe=False,
-    keywords=swutils.__title__,
+    keywords=[swutils.__title__],
     classifiers=[
         pkutils.LICENSES[license],
         'Development Status :: 4 - Beta',
