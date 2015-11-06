@@ -50,6 +50,7 @@ class ExceptionHandler(object):
 
     Note: the following doctests assume you have a running Postfix server
     https://www.garron.me/en/mac/postfix-relay-gmail-mac-os-x-local-smtp.html
+    `sudo postfix start`
     """
     def __init__(self, to, logfile='log.txt', logname=''):
         """ExceptionHandler constructor
