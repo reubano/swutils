@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.8.0'
+__version__ = '0.8.1'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
