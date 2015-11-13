@@ -105,7 +105,7 @@ class ExceptionHandler(object):
         msg['To'] = self.to
 
         s = smtplib.SMTP(host)
-        # s.sendmail(msg['From'], [msg['To']], msg.as_string())
+        s.sendmail(msg['From'], [msg['To']], msg.as_string())
         s.quit()
         return s
 
