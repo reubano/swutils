@@ -44,7 +44,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.8.1'
+__version__ = '0.8.2'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -104,10 +104,8 @@ class ExceptionHandler(object):
         msg['Subject'] = subject or 'scraperwiki box %s failed' % user
         msg['To'] = self.to
 
-        # Send the message via our own SMTP server, but don't include the
-        # envelope header.
         s = smtplib.SMTP(host)
-        # s.sendmail(msg['From'], [msg['To']], msg.as_string())
+        s.sendmail(msg['From'], [msg['To']], msg.as_string())
         s.quit()
         return s
 
@@ -407,12 +405,17 @@ def populate(gen_data, engine, models=None, get_name=None, **kwargs):
         result = result_func(t)
         table, rid, data = result['table'], result['rid'], result['data']
         del_count = delete_records(table, rid, engine)
-        logger.debug(get_message(del_count, table.name))
+
+        if del_count:
+            logger.debug(get_message(del_count, table.name))
 
         for records in ft.chunk(data, chunk_size):
             del_count, in_count = execute(records, engine, table, rid)
             count += in_count
-            logger.debug(get_message(del_count, table.name))
+
+            if del_count:
+                logger.debug(get_message(del_count, table.name))
+
             logger.debug(get_message(in_count, table.name, False))
 
             if test:
