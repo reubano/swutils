@@ -405,12 +405,17 @@ def populate(gen_data, engine, models=None, get_name=None, **kwargs):
         result = result_func(t)
         table, rid, data = result['table'], result['rid'], result['data']
         del_count = delete_records(table, rid, engine)
-        logger.debug(get_message(del_count, table.name))
+
+        if del_count:
+            logger.debug(get_message(del_count, table.name))
 
         for records in ft.chunk(data, chunk_size):
             del_count, in_count = execute(records, engine, table, rid)
             count += in_count
-            logger.debug(get_message(del_count, table.name))
+
+            if del_count:
+                logger.debug(get_message(del_count, table.name))
+
             logger.debug(get_message(in_count, table.name, False))
 
             if test:
