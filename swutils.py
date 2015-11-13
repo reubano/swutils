@@ -36,7 +36,7 @@ from pprint import pprint
 from operator import itemgetter
 from functools import partial
 
-from tabutils import process as pr, fntools as ft
+from tabutils import process as pr, fntools as ft, io
 from sqlalchemy import Column, Integer
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.declarative import declarative_base
@@ -227,32 +227,19 @@ def get_dynamic_res(engine, get_name, t, **kwargs):
 
     # dynamically create sqlalchemy table
     attrs = {'__tablename__': table_name}
-
-    result = {
-        'table': type(str(name), (Base, kwargs['mixin']), attrs).__table__,
-        'rid': None,
-        'data': data}
-
-    return result
+    table = type(str(name), (Base, kwargs['mixin']), attrs).__table__
+    return {'table': table, 'rid': None, 'data': data}
 
 
-def res_from_models(models, gen_data, t, **kwargs):
-    result = {
-        'table': getattr(models, t.get('name').title()).__table__,
-        'rid': t.get('rid'),
-        'data': gen_data(**pr.merge([kwargs, t]))}
-
-    return result
+def res_from_models(models, t, data=None):
+    table = getattr(models, t.get('name').title()).__table__
+    return {'table': table, 'rid': t.get('rid'), 'data': data}
 
 
-def res_from_meta(engine, gen_data, t, **kwargs):
+def res_from_meta(engine, t, data=None):
     meta.reflect(engine)
-    result = {
-        'table': meta.tables[t.get('name')],
-        'rid': t.get('rid'),
-        'data': gen_data(**pr.merge([kwargs, t]))}
-
-    return result
+    table = meta.tables[t.get('name')]
+    return {'table': table, 'rid': t.get('rid'), 'data': data}
 
 
 def delete_records(table, rid, engine):
@@ -273,21 +260,38 @@ def delete_records(table, rid, engine):
     return del_count
 
 
-def get_tables(gen_data, **kwargs):
-    tables = kwargs.get('TABLES')
+def get_tables(data, key):
+    keyfunc = itemgetter(key)
+    return it.groupby(sorted(data, key=keyfunc), keyfunc)
 
-    if tables:
-        dynamic = False
+
+def gen_data(f=None, ext='csv', records=None, **kwargs):
+    """Generates data from records or file"""
+    if f:
+        switch = {'csv': io.read_csv, 'xls': io.read_xls, 'xlsx': io.read_xls}
+        records = switch[ext](f, sanitize=True, encoding=kwargs.get('encoding'))
+    elif not records:
+        raise TypeError('Either `records` or `f` must be supplied')
+
+    if kwargs.get('normalize'):
+        normalized = kwargs['normalize'](records, **kwargs)
     else:
-        dynamic = True
-        data = gen_data(**kwargs)
-        keyfunc = itemgetter(kwargs['KEY'])
-        tables = it.groupby(sorted(data, key=keyfunc), keyfunc)
+        normalized = records
 
-    return dynamic, tables
+    if kwargs.get('filterer'):
+        filtered = it.ifilter(partial(kwargs['filterer'], **kwargs), normalized)
+    else:
+        filtered = normalized
+
+    if kwargs.get('parser'):
+        parsed = it.imap(partial(kwargs['parser'], **kwargs), filtered)
+    else:
+        parsed = filtered
+
+    return parsed
 
 
-def populate(gen_data, engine, models=None, get_name=None, **kwargs):
+def populate(engine, models=None, get_name=None, **kwargs):
     """Populates a SQLAlchemy db with data. Supports both declarative
     SQLAlchemy and Flask-SQLAlchemy
 
@@ -386,24 +390,27 @@ def populate(gen_data, engine, models=None, get_name=None, **kwargs):
     logger.addHandler(console_handler)
     test = kwargs.get('TESTING')
     row_limit = kwargs.get('ROW_LIMIT')
+    tables = kwargs.get('TABLES')
     chunk_size = min(row_limit or 'inf', kwargs.get('CHUNK_SIZE', row_limit))
     engine.session = sessionmaker(engine)()
+    dynamic = not tables
 
     if test:
         meta.create_all(engine)
 
-    dynamic, tables = get_tables(gen_data, **kwargs)
-
     if dynamic:
+        data = gen_data(**kwargs)
+        tables = get_tables(data, kwargs['KEY'])
         result_func = partial(get_dynamic_res, engine, get_name, **kwargs)
     elif models:
-        result_func = partial(res_from_models, models, gen_data, **kwargs)
+        result_func = partial(res_from_models, models, **kwargs)
     else:
-        result_func = partial(res_from_meta, engine, gen_data, **kwargs)
+        result_func = partial(res_from_meta, engine, **kwargs)
 
     for t in tables:
         count = 0
-        result = result_func(t)
+        data = data if dynamic else gen_data(**pr.merge([kwargs, t]))
+        result = result_func(t, data=data)
         table, rid, data = result['table'], result['rid'], result['data']
         del_count = delete_records(table, rid, engine)
 
