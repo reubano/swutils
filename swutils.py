@@ -104,8 +104,6 @@ class ExceptionHandler(object):
         msg['Subject'] = subject or 'scraperwiki box %s failed' % user
         msg['To'] = self.to
 
-        # Send the message via our own SMTP server, but don't include the
-        # envelope header.
         s = smtplib.SMTP(host)
         # s.sendmail(msg['From'], [msg['To']], msg.as_string())
         s.quit()
