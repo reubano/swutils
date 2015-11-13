@@ -36,7 +36,6 @@ from pprint import pprint
 from operator import itemgetter
 from functools import partial
 
-from testfixtures import LogCapture
 from tabutils import process as pr, fntools as ft
 from sqlalchemy import Column, Integer
 from sqlalchemy.exc import OperationalError
@@ -117,7 +116,9 @@ class ExceptionHandler(object):
 
         Examples:
             >>> import os
+            >>> from testfixtures import LogCapture
             >>> from tempfile import NamedTemporaryFile
+            >>>
             >>> f = NamedTemporaryFile(delete=False)
             >>> to = 'reubano@gmail.com'
             >>> exc_handler = ExceptionHandler(to, f.name).handler
