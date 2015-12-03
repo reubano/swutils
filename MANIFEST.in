@@ -1,4 +1,4 @@
-recursive-include swutils/tests *
+recursive-include tests *
 include CHANGES.rst
 include CONTRIBUTING.rst
 include LICENSE

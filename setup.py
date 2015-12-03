@@ -28,6 +28,7 @@ setup(
     url='https://github.com/reubano/swutils',
     py_modules=['swutils'],
     include_package_data=True,
+    package_data={},
     install_requires=requirements,
     dependency_links=dependencies,
     tests_require=dev_requirements,
