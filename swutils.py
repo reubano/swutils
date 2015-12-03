@@ -265,13 +265,20 @@ def get_tables(data, key):
     return it.groupby(sorted(data, key=keyfunc), keyfunc)
 
 
-def gen_data(f=None, ext='csv', records=None, **kwargs):
+def gen_data(fetch=None, **kwargs):
     """Generates data from records or file"""
-    if f:
+    result = fetch(**kwargs)
+
+    if result.get('f'):
         switch = {'csv': io.read_csv, 'xls': io.read_xls, 'xlsx': io.read_xls}
-        records = switch[ext](f, sanitize=True, encoding=kwargs.get('encoding'))
-    elif not records:
-        raise TypeError('Either `records` or `f` must be supplied')
+        f = result.pop('f')
+        ext = result.get('ext', 'csv')
+        records = switch[ext](f, sanitize=True, **result)
+    elif result.get('records'):
+        records = result['records']
+    else:
+        msg = '`fetch` must return a dict with either `records` or `f`.'
+        raise TypeError(msg)
 
     if kwargs.get('normalize'):
         normalized = kwargs['normalize'](records, **kwargs)
@@ -283,7 +290,7 @@ def gen_data(f=None, ext='csv', records=None, **kwargs):
     else:
         filtered = normalized
 
-    if kwargs.get('parser'):
+    if kwargs.get('parse'):
         parsed = it.imap(partial(kwargs['parser'], **kwargs), filtered)
     else:
         parsed = filtered
