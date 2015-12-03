@@ -270,10 +270,10 @@ def gen_data(fetch=None, **kwargs):
     result = fetch(**kwargs)
 
     if result.get('f'):
-        switch = {'csv': io.read_csv, 'xls': io.read_xls, 'xlsx': io.read_xls}
         f = result.pop('f')
-        ext = result.get('ext', 'csv')
-        records = switch[ext](f, sanitize=True, **result)
+        ext = result.pop('ext', 'csv')
+        reader = io.get_reader(ext)
+        records = reader(f, sanitize=True, **result)
     elif result.get('records'):
         records = result['records']
     else:
