@@ -289,7 +289,7 @@ def gen_data(fetch=None, **kwargs):
         filtered = normalized
 
     if kwargs.get('parse'):
-        parsed = it.imap(partial(kwargs['parser'], **kwargs), filtered)
+        parsed = it.imap(partial(kwargs['parse'], **kwargs), filtered)
     else:
         parsed = filtered
 
