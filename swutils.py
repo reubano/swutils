@@ -231,12 +231,12 @@ def get_dynamic_res(engine, get_name, t, **kwargs):
     return {'table': table, 'rid': None, 'data': data}
 
 
-def res_from_models(models, t, data=None):
+def res_from_models(models, t, data=None, **kwargs):
     table = getattr(models, t.get('name').title()).__table__
     return {'table': table, 'rid': t.get('rid'), 'data': data}
 
 
-def res_from_meta(engine, t, data=None):
+def res_from_meta(engine, t, data=None, **kwargs):
     meta.reflect(engine)
     table = meta.tables[t.get('name')]
     return {'table': table, 'rid': t.get('rid'), 'data': data}
