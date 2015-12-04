@@ -43,7 +43,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.10.2'
+__version__ = '0.11.0'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -289,7 +289,7 @@ def gen_data(fetch=None, **kwargs):
         filtered = normalized
 
     if kwargs.get('parse'):
-        parsed = it.imap(partial(kwargs['parser'], **kwargs), filtered)
+        parsed = it.imap(partial(kwargs['parse'], **kwargs), filtered)
     else:
         parsed = filtered
 
