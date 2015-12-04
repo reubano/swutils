@@ -43,7 +43,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.10.0'
+__version__ = '0.10.1'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -231,12 +231,12 @@ def get_dynamic_res(engine, get_name, t, **kwargs):
     return {'table': table, 'rid': None, 'data': data}
 
 
-def res_from_models(models, t, data=None):
+def res_from_models(models, t, data=None, **kwargs):
     table = getattr(models, t.get('name').title()).__table__
     return {'table': table, 'rid': t.get('rid'), 'data': data}
 
 
-def res_from_meta(engine, t, data=None):
+def res_from_meta(engine, t, data=None, **kwargs):
     meta.reflect(engine)
     table = meta.tables[t.get('name')]
     return {'table': table, 'rid': t.get('rid'), 'data': data}
@@ -265,13 +265,20 @@ def get_tables(data, key):
     return it.groupby(sorted(data, key=keyfunc), keyfunc)
 
 
-def gen_data(f=None, ext='csv', records=None, **kwargs):
+def gen_data(fetch=None, **kwargs):
     """Generates data from records or file"""
-    if f:
-        switch = {'csv': io.read_csv, 'xls': io.read_xls, 'xlsx': io.read_xls}
-        records = switch[ext](f, sanitize=True, encoding=kwargs.get('encoding'))
-    elif not records:
-        raise TypeError('Either `records` or `f` must be supplied')
+    result = fetch(**kwargs)
+
+    if result.get('f'):
+        f = result.pop('f')
+        ext = result.pop('ext', 'csv')
+        reader = io.get_reader(ext)
+        records = reader(f, sanitize=True, **result)
+    elif result.get('records'):
+        records = result['records']
+    else:
+        msg = '`fetch` must return a dict with either `records` or `f`.'
+        raise TypeError(msg)
 
     if kwargs.get('normalize'):
         normalized = kwargs['normalize'](records, **kwargs)
@@ -283,7 +290,7 @@ def gen_data(f=None, ext='csv', records=None, **kwargs):
     else:
         filtered = normalized
 
-    if kwargs.get('parser'):
+    if kwargs.get('parse'):
         parsed = it.imap(partial(kwargs['parser'], **kwargs), filtered)
     else:
         parsed = filtered
