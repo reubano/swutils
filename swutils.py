@@ -43,7 +43,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.schema import MetaData
 from sqlalchemy.orm import sessionmaker
 
-__version__ = '0.10.1'
+__version__ = '0.10.2'
 
 __title__ = 'swutils'
 __author__ = 'Reuben Cummings'
@@ -215,7 +215,7 @@ def execute(records, engine, table, rid=None):
     else:
         del_count = 0
 
-    engine.execute(table.insert(), records)
+    engine.execute(table.__table__.insert(), records)
     return del_count, in_count
 
 
@@ -227,12 +227,12 @@ def get_dynamic_res(engine, get_name, t, **kwargs):
 
     # dynamically create sqlalchemy table
     attrs = {'__tablename__': table_name}
-    table = type(str(name), (Base, kwargs['mixin']), attrs).__table__
+    table = type(str(name), (Base, kwargs['mixin']), attrs)
     return {'table': table, 'rid': None, 'data': data}
 
 
 def res_from_models(models, t, data=None, **kwargs):
-    table = getattr(models, t.get('name').title()).__table__
+    table = getattr(models, t.get('name').title())
     return {'table': table, 'rid': t.get('rid'), 'data': data}
 
 
@@ -245,12 +245,10 @@ def res_from_meta(engine, t, data=None, **kwargs):
 def delete_records(table, rid, engine):
     if not rid:
         # delete all records since there is no way to identify them
-        table.query = engine.session.query(table)
-
         try:
             del_count = table.query.delete(synchronize_session=False)
         except OperationalError:
-            table.create(engine)
+            table.__table__.create(engine)
             del_count = 0
         else:
             engine.session.commit()
@@ -419,6 +417,8 @@ def populate(engine, models=None, get_name=None, **kwargs):
         data = data if dynamic else gen_data(**pr.merge([kwargs, t]))
         result = result_func(t, data=data)
         table, rid, data = result['table'], result['rid'], result['data']
+        table.name = table.__table__.name
+        table.query = engine.session.query(table)
         del_count = delete_records(table, rid, engine)
 
         if del_count:
